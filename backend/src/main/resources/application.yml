@@ -1,57 +1,64 @@
-version: '3.8'
+spring:
+  profiles:
+    active: prod # 기본 실행 프로필을 운영(prod)으로 설정
 
-services:
-  # 1. 데이터베이스 설정 (MariaDB)
-  db:
-    image: mariadb:10.11
-    container_name: carrot-db
-    restart: always
-    environment:
-      MARIADB_ROOT_PASSWORD: ${DB_PASSWORD}
-      MARIADB_DATABASE: restock_db
-    ports:
-      - "3309:3306"
-    volumes:
-      - ./db_data:/var/lib/mysql
-      - ./initdb:/docker-entrypoint-initdb.d
+---
+# ----------------------------------------------------------------
+# 운영 환경 (Production) 설정
+# ----------------------------------------------------------------
+spring:
+  config:
+    activate:
+      on-profile: prod
 
-  # 2. 백엔드 설정 (Spring Boot)
-  backend:
-    build: ./backend
-    container_name: carrot-backend
-    restart: always
-    ports:
-      - "8080:8080"
-    environment:
-      SPRING_DATASOURCE_URL: jdbc:mariadb://db:3306/restock_db?characterEncoding=UTF-8&createDatabaseIfNotExist=true
-      SPRING_DATASOURCE_USERNAME: root
-      SPRING_DATASOURCE_PASSWORD: ${DB_PASSWORD}
-      DB_PASSWORD: ${DB_PASSWORD}
-      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID}
-      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET}
-      
-      # ✅ 에러 해결 핵심: 스프링의 'ai.google.gemini.api-key'와 매핑되도록 언더바 형식 추가
-      AI_GOOGLE_GEMINI_API_KEY: ${GEMINI_API_KEY}
-      
-      REACT_APP_API_URL: http://localhost:3000
-    volumes:
-      - ./uploads:/app/uploads
-    depends_on:
-      - db
+  datasource:
+    # DB 주소, 계정 정보는 환경 변수로 주입받음
+    driver-class-name: org.mariadb.jdbc.Driver
+    url: jdbc:mariadb://${RDS_HOSTNAME}:3306/restock_db?characterEncoding=UTF-8
+    username: ${RDS_USERNAME}
+    password: ${RDS_PASSWORD}
 
-  # 3. 프론트엔드 설정 (React)
-  frontend:
-    build:
-      context: ./frontend
-      args:
-        # ✅ 콜론(:) 뒤에 한 칸 띄우는 YAML 문법을 준수했습니다.
-        REACT_APP_API_URL: ${REACT_APP_API_URL}
-        REACT_APP_IMAGE_URL: ${REACT_APP_IMAGE_URL}
-        REACT_APP_GOOGLE_CLIENT_ID: ${REACT_APP_GOOGLE_CLIENT_ID}
-        GENERATE_SOURCEMAP: ${GENERATE_SOURCEMAP}
-    container_name: carrot-frontend
-    restart: always
-    ports:
-      - "3000:80"
-    depends_on:
-      - backend
+  jpa:
+    hibernate:
+      ddl-auto: update # 운영 중 데이터 유지를 위해 update 또는 none 권장
+    show-sql: false
+    properties:
+      hibernate:
+        format_sql: true
+
+  # Google OAuth 설정
+  security:
+    oauth2:
+      client:
+        registration:
+          google:
+            client-id: ${GOOGLE_CLIENT_ID}
+            client-secret: ${GOOGLE_CLIENT_SECRET}
+            scope:
+              - email
+              - profile
+
+# ----------------------------------------------------------------
+# AWS & AI 설정 (S3 및 Gemini)
+# ----------------------------------------------------------------
+cloud:
+  aws:
+    s3:
+      bucket: ${AWS_S3_BUCKET}
+    region:
+      static: ap-northeast-2
+    credentials:
+      access-key: ${AWS_ACCESS_KEY}
+      secret-key: ${AWS_SECRET_KEY}
+    stack:
+      auto: false
+
+# AI Gemini API Key (액션에서 주입받은 환경변수와 매핑)
+ai:
+  google:
+    gemini:
+      api-key: ${AI_GOOGLE_GEMINI_API_KEY}
+
+# 업로드 경로 설정 (로컬 테스트용과 S3 구분 시 사용)
+file:
+  upload-dir: s3://${AWS_S3_BUCKET}/uploads
