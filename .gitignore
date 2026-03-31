@@ -1,0 +1,15 @@
+# Security
+.env
+
+# Java / Gradle
+backend/build/
+backend/.gradle/
+backend/.idea/
+backend/out/
+
+# Node / React
+frontend/node_modules/
+frontend/build/
+
+# Uploaded Files
+uploads/
