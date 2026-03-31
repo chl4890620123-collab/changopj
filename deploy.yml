@@ -1,0 +1,63 @@
+name: Deploy to Amazon EC2
+
+on:
+  push:
+    branches: [ "main" ] # 메인 브랜치에 푸시될 때 실행
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # 1. AWS 인증 (Secret에 등록할 값들)
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_KEY }}
+          aws-region: ap-northeast-2
+
+      # 2. ECR(데파스토리) 로그인
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v1
+
+      # 3. Docker 이미지 빌드 및 ECR 푸시
+      - name: Build and Push to ECR
+        run: |
+          # 백엔드 빌드 및 푸시
+          docker build -t ${{ steps.login-ecr.outputs.registry }}/carrot-backend ./backend
+          docker push ${{ steps.login-ecr.outputs.registry }}/carrot-backend
+          
+          # 프론트엔드 빌드 및 푸시
+          docker build -t ${{ steps.login-ecr.outputs.registry }}/carrot-frontend ./frontend
+          docker push ${{ steps.login-ecr.outputs.registry }}/carrot-frontend
+
+      # 4. EC2에 접속해서 배포 실행
+      - name: Deploy to EC2
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ubuntu
+          key: ${{ secrets.EC2_SSH_KEY }}
+          script: |
+            cd ~/changopj
+            # 기존 .env 삭제 후 Secrets 값으로 새로 생성 (애플리케이션 주입용)
+            echo "DB_PASSWORD=${{ secrets.DB_PASSWORD }}" > .env
+            echo "RDS_HOSTNAME=${{ secrets.RDS_HOSTNAME }}" >> .env
+            echo "RDS_USERNAME=${{ secrets.RDS_USERNAME }}" >> .env
+            echo "RDS_PASSWORD=${{ secrets.RDS_PASSWORD }}" >> .env
+            echo "GOOGLE_CLIENT_ID=${{ secrets.GOOGLE_CLIENT_ID }}" >> .env
+            echo "GOOGLE_CLIENT_SECRET=${{ secrets.GOOGLE_CLIENT_SECRET }}" >> .env
+            echo "GEMINI_API_KEY=${{ secrets.GEMINI_API_KEY }}" >> .env
+            echo "AI_GOOGLE_GEMINI_API_KEY=${{ secrets.GEMINI_API_KEY }}" >> .env
+            echo "AWS_ACCOUNT_ID=${{ secrets.AWS_ACCOUNT_ID }}" >> .env
+            echo "AWS_ACCESS_KEY=${{ secrets.AWS_ACCESS_KEY }}" >> .env
+            echo "AWS_SECRET_KEY=${{ secrets.AWS_SECRET_KEY }}" >> .env
+            echo "AWS_S3_BUCKET=${{ secrets.AWS_S3_BUCKET }}" >> .env
+            
+            # 최신 이미지 가져오기 및 컨테이너 재시작
+            sudo docker-compose pull
+            sudo docker-compose up -d
