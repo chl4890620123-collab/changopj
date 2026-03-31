@@ -1,54 +1,35 @@
 version: '3.8'
 
 services:
-  # 1. 데이터베이스 (기존 설정 유지)
-  db:
-    image: mariadb:10.11
-    container_name: carrot-db
-    restart: always
-    environment:
-      MARIADB_ROOT_PASSWORD: ${DB_PASSWORD}
-      MARIADB_DATABASE: restock_db
-    ports:
-      - "3306:3306" # 운영 환경에선 표준 포트 권장 (또는 내부망 전용)
-    volumes:
-      - ./db_data:/var/lib/mysql
-      - ./initdb:/docker-entrypoint-initdb.d
-
-  # 2. 백엔드 (ECR 이미지 사용 및 환경 변수 주입)
+  # 1. 백엔드 (RDS 연결)
   backend:
-    # 💡 build 대신 ECR 데파스토리 주소를 사용합니다.
     image: ${AWS_ACCOUNT_ID}.dkr.ecr.ap-northeast-2.amazonaws.com/carrot-backend:latest
     container_name: carrot-backend
     restart: always
     ports:
       - "8080:8080"
     environment:
-      # application.yml의 ${RDS_HOSTNAME} 등을 채워줄 실제 변수들
-      RDS_HOSTNAME: ${RDS_HOSTNAME}
-      RDS_USERNAME: ${RDS_USERNAME}
-      RDS_PASSWORD: ${RDS_PASSWORD}
+      # RDS 접속 정보 (GitHub Secrets에서 주입됨)
+      SPRING_DATASOURCE_URL: jdbc:mariadb://${RDS_HOSTNAME}:3306/restock_db?characterEncoding=UTF-8
+      SPRING_DATASOURCE_USERNAME: ${RDS_USERNAME}
+      SPRING_DATASOURCE_PASSWORD: ${RDS_PASSWORD}
       
       GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID}
       GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET}
       AI_GOOGLE_GEMINI_API_KEY: ${GEMINI_API_KEY}
       
-      # S3 관련 (S3를 쓸 것이므로 로컬 볼륨은 제거하거나 백업용으로만 둡니다)
       AWS_ACCESS_KEY: ${AWS_ACCESS_KEY}
       AWS_SECRET_KEY: ${AWS_SECRET_KEY}
       AWS_S3_BUCKET: ${AWS_S3_BUCKET}
       
-      # 운영 환경 IP로 허용 (액션에서 주입)
       APP_CORS_ALLOWED_ORIGINS: http://${EC2_HOST},http://${EC2_HOST}:3000
-    depends_on:
-      - db
 
-  # 3. 프론트엔드 (ECR 이미지 사용)
+  # 2. 프론트엔드
   frontend:
     image: ${AWS_ACCOUNT_ID}.dkr.ecr.ap-northeast-2.amazonaws.com/carrot-frontend:latest
     container_name: carrot-frontend
     restart: always
     ports:
-      - "80:80" # 웹 표준 포트 사용
+      - "80:80"
     depends_on:
       - backend
