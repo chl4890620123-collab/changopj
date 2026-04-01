@@ -1,64 +1,60 @@
-name: Deploy to Amazon EC2 with CodeDeploy
+spring:
+  profiles:
+    active: prod # 기본 실행 프로필을 운영(prod)으로 설정
 
-on:
-  push:
-    branches: [ "main" ]
+---
+# ----------------------------------------------------------------
+# 운영 환경 (Production) 설정
+# ----------------------------------------------------------------
+spring:
+  config:
+    activate:
+      on-profile: prod
 
-jobs:
-  deploy:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+  datasource:
+    driver-class-name: org.mariadb.jdbc.Driver
+    # SSL 관련 파라미터를 추가하여 RDS 보안 정책에 대응합니다.
+    url: jdbc:mariadb://${RDS_HOSTNAME}:3306/restock_db?characterEncoding=UTF-8&useSSL=true&trustServerCertificate=true
+    username: ${RDS_USERNAME}
+    password: ${RDS_PASSWORD}
 
-      # 1. AWS 인증
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v2
-        with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_KEY }}
-          aws-region: ap-northeast-2
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: false
+    properties:
+      hibernate:
+        format_sql: true
+        # DB 연결 성공 후 Dialect 판별 에러를 방지하기 위해 명시합니다.
+        dialect: org.hibernate.dialect.MariaDBDialect
 
-      # 2. ECR 로그인
-      - name: Login to Amazon ECR
-        id: login-ecr
-        uses: aws-actions/amazon-ecr-login@v1
+  security:
+    oauth2:
+      client:
+        registration:
+          google:
+            client-id: ${GOOGLE_CLIENT_ID}
+            client-secret: ${GOOGLE_CLIENT_SECRET}
+            scope:
+              - email
+              - profile
 
-      # 3. Docker 이미지 빌드 및 ECR 푸시
-      - name: Build and Push to ECR
-        run: |
-          docker build -t ${{ steps.login-ecr.outputs.registry }}/carrot-backend ./backend
-          docker push ${{ steps.login-ecr.outputs.registry }}/carrot-backend
-          
-          docker build \
-            --build-arg REACT_APP_API_URL=http://${{ secrets.EC2_HOST }}:8080 \
-            --build-arg REACT_APP_GOOGLE_CLIENT_ID=${{ secrets.GOOGLE_CLIENT_ID }} \
-            -t ${{ steps.login-ecr.outputs.registry }}/carrot-frontend ./frontend
-          docker push ${{ steps.login-ecr.outputs.registry }}/carrot-frontend
+cloud:
+  aws:
+    s3:
+      bucket: ${AWS_S3_BUCKET}
+    region:
+      static: ap-northeast-2
+    credentials:
+      access-key: ${AWS_ACCESS_KEY}
+      secret-key: ${AWS_SECRET_KEY}
+    stack:
+      auto: false
 
-      # 4. 배포용 .env 파일 생성 (압축에 포함시키기 위해 여기서 생성)
-      - name: Create .env file
-        run: |
-          echo "RDS_HOSTNAME=${{ secrets.RDS_HOSTNAME }}" > .env
-          echo "RDS_USERNAME=${{ secrets.RDS_USERNAME }}" >> .env
-          echo "RDS_PASSWORD=${{ secrets.RDS_PASSWORD }}" >> .env
-          echo "GOOGLE_CLIENT_ID=${{ secrets.GOOGLE_CLIENT_ID }}" >> .env
-          echo "GOOGLE_CLIENT_SECRET=${{ secrets.GOOGLE_CLIENT_SECRET }}" >> .env
-          echo "GEMINI_API_KEY=${{ secrets.GEMINI_API_KEY }}" >> .env
-          echo "AWS_ACCOUNT_ID=${{ secrets.AWS_ACCOUNT_ID }}" >> .env
-          echo "AWS_S3_BUCKET=${{ secrets.AWS_S3_BUCKET }}" >> .env
+ai:
+  google:
+    gemini:
+      api-key: ${AI_GOOGLE_GEMINI_API_KEY}
 
-      # 5. S3로 배포 파일 업로드 (그림의 4번 과정)
-      - name: zip and upload to S3
-        run: |
-          zip -r deploy.zip appspec.yml scripts/ docker-compose.yml .env
-          aws s3 cp deploy.zip s3://${{ secrets.AWS_S3_BUCKET }}/deploy.zip
-
-      # 6. CodeDeploy 실행 (그림의 5번 과정)
-      - name: CodeDeploy
-        run: |
-          aws deploy create-deployment \
-            --application-name carrot-warehouse-app \
-            --deployment-config-name CodeDeployDefault.AllAtOnce \
-            --deployment-group-name carrot-warehouse-group \
-            --s3-location bucket=${{ secrets.AWS_S3_BUCKET }},key=deploy.zip,bundleType=zip
+file:
+  upload-dir: s3://${AWS_S3_BUCKET}/uploads
