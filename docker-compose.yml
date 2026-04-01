@@ -8,13 +8,11 @@ services:
     restart: always
     ports:
       - "8080:8080"
-    # .env 파일의 모든 환경 변수를 로드합니다.
     env_file:
       - .env
     environment:
-      # SSL 관련 보안 연결 오류를 해결하기 위해 파라미터를 추가했습니다.
-      # useSSL=false와 allowPublicKeyRetrieval=true 등을 조합하여 접속을 시도합니다.
-      SPRING_DATASOURCE_URL: jdbc:mariadb://${RDS_HOSTNAME}:3306/restock_db?characterEncoding=UTF-8&useSSL=false&allowPublicKeyRetrieval=true&verifyServerCertificate=false
+      # RDS 보안 정책(--require_secure_transport=ON)에 맞춰 SSL 설정을 true로 변경했습니다.
+      SPRING_DATASOURCE_URL: jdbc:mariadb://${RDS_HOSTNAME}:3306/restock_db?characterEncoding=UTF-8&useSSL=true&trustServerCertificate=true
       SPRING_DATASOURCE_USERNAME: ${RDS_USERNAME}
       SPRING_DATASOURCE_PASSWORD: ${RDS_PASSWORD}
       
@@ -26,7 +24,6 @@ services:
       AWS_SECRET_KEY: ${AWS_SECRET_KEY}
       AWS_S3_BUCKET: ${AWS_S3_BUCKET}
       
-      # CORS 설정: EC2_HOST 변수가 .env에 정의되어 있어야 합니다.
       APP_CORS_ALLOWED_ORIGINS: http://${EC2_HOST},http://${EC2_HOST}:3000
 
   # 2. 프론트엔드
