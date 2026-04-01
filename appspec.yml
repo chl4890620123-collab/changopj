@@ -2,19 +2,19 @@ version: 0.0
 os: linux
 files:
   - source: /
-    destination: /home/ubuntu/changopj
+    destination: /home/ec2-user/changopj  # 수정: ubuntu -> ec2-user
     overwrite: yes
 
 # 추가: 실행 권한을 명시적으로 부여합니다.
 permissions:
-  - object: /home/ubuntu/changopj/scripts/deploy.sh
+  - object: /home/ec2-user/changopj/scripts/deploy.sh # 수정: ubuntu -> ec2-user
     pattern: "**"
     mode: 755
-    owner: ubuntu
-    group: ubuntu
+    owner: ec2-user  # 수정: ubuntu -> ec2-user
+    group: ec2-user  # 수정: ubuntu -> ec2-user
 
 hooks:
   AfterInstall:
     - location: scripts/deploy.sh
       timeout: 300
-      runas: ubuntu
+      runas: ec2-user  # 수정: ubuntu -> ec2-user
