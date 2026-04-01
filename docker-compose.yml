@@ -11,7 +11,7 @@ services:
     env_file:
       - .env
     environment:
-      # RDS 보안 정책(--require_secure_transport=ON)에 맞춰 SSL 설정을 true로 변경했습니다.
+      # SSL 설정을 true로 변경하고 trustServerCertificate 옵션을 추가했습니다.
       SPRING_DATASOURCE_URL: jdbc:mariadb://${RDS_HOSTNAME}:3306/restock_db?characterEncoding=UTF-8&useSSL=true&trustServerCertificate=true
       SPRING_DATASOURCE_USERNAME: ${RDS_USERNAME}
       SPRING_DATASOURCE_PASSWORD: ${RDS_PASSWORD}
