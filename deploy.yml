@@ -1,4 +1,4 @@
-name: Deploy to Amazon EC2
+name: Deploy to Amazon EC2 with CodeDeploy
 
 on:
   push:
@@ -11,7 +11,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      # 1. AWS 인증 (Secret 기반)
+      # 1. AWS 인증
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v2
         with:
@@ -19,7 +19,7 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_KEY }}
           aws-region: ap-northeast-2
 
-      # 2. ECR(데파스토리) 로그인
+      # 2. ECR 로그인
       - name: Login to Amazon ECR
         id: login-ecr
         uses: aws-actions/amazon-ecr-login@v1
@@ -27,47 +27,38 @@ jobs:
       # 3. Docker 이미지 빌드 및 ECR 푸시
       - name: Build and Push to ECR
         run: |
-          # 백엔드 빌드
           docker build -t ${{ steps.login-ecr.outputs.registry }}/carrot-backend ./backend
           docker push ${{ steps.login-ecr.outputs.registry }}/carrot-backend
           
-          # 프론트엔드 빌드 (중요: 빌드 시점에 환경 변수 주입)
           docker build \
             --build-arg REACT_APP_API_URL=http://${{ secrets.EC2_HOST }}:8080 \
             --build-arg REACT_APP_GOOGLE_CLIENT_ID=${{ secrets.GOOGLE_CLIENT_ID }} \
             -t ${{ steps.login-ecr.outputs.registry }}/carrot-frontend ./frontend
           docker push ${{ steps.login-ecr.outputs.registry }}/carrot-frontend
 
-      # 4. EC2 접속 및 배포 실행
-      - name: Deploy to EC2
-        uses: appleboy/ssh-action@master
-        with:
-          host: ${{ secrets.EC2_HOST }}
-          username: ubuntu
-          key: ${{ secrets.EC2_SSH_KEY }}
-          script: |
-            cd ~/changopj
-            
-            # .env 파일 생성 (모든 보안 키와 설정값 주입)
-            echo "RDS_HOSTNAME=${{ secrets.RDS_HOSTNAME }}" > .env
-            echo "RDS_USERNAME=${{ secrets.RDS_USERNAME }}" >> .env
-            echo "RDS_PASSWORD=${{ secrets.RDS_PASSWORD }}" >> .env
-            echo "DB_PASSWORD=${{ secrets.DB_PASSWORD }}" >> .env
-            echo "GOOGLE_CLIENT_ID=${{ secrets.GOOGLE_CLIENT_ID }}" >> .env
-            echo "GOOGLE_CLIENT_SECRET=${{ secrets.GOOGLE_CLIENT_SECRET }}" >> .env
-            echo "GEMINI_API_KEY=${{ secrets.GEMINI_API_KEY }}" >> .env
-            echo "AI_GOOGLE_GEMINI_API_KEY=${{ secrets.GEMINI_API_KEY }}" >> .env
-            echo "AWS_ACCOUNT_ID=${{ secrets.AWS_ACCOUNT_ID }}" >> .env
-            echo "AWS_ACCESS_KEY=${{ secrets.AWS_ACCESS_KEY }}" >> .env
-            echo "AWS_SECRET_KEY=${{ secrets.AWS_SECRET_KEY }}" >> .env
-            echo "AWS_S3_BUCKET=${{ secrets.AWS_S3_BUCKET }}" >> .env
+      # 4. 배포용 .env 파일 생성 (압축에 포함시키기 위해 여기서 생성)
+      - name: Create .env file
+        run: |
+          echo "RDS_HOSTNAME=${{ secrets.RDS_HOSTNAME }}" > .env
+          echo "RDS_USERNAME=${{ secrets.RDS_USERNAME }}" >> .env
+          echo "RDS_PASSWORD=${{ secrets.RDS_PASSWORD }}" >> .env
+          echo "GOOGLE_CLIENT_ID=${{ secrets.GOOGLE_CLIENT_ID }}" >> .env
+          echo "GOOGLE_CLIENT_SECRET=${{ secrets.GOOGLE_CLIENT_SECRET }}" >> .env
+          echo "GEMINI_API_KEY=${{ secrets.GEMINI_API_KEY }}" >> .env
+          echo "AWS_ACCOUNT_ID=${{ secrets.AWS_ACCOUNT_ID }}" >> .env
+          echo "AWS_S3_BUCKET=${{ secrets.AWS_S3_BUCKET }}" >> .env
 
-            # EC2에서 ECR 이미지를 당겨오기 위한 로그인
-            aws ecr get-login-password --region ap-northeast-2 | sudo docker login --username AWS --password-stdin ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.ap-northeast-2.amazonaws.com
-            
-            # 최신 이미지 반영 및 실행
-            sudo docker-compose pull
-            sudo docker-compose up -d
-            
-            # 미사용 이미지 정리 (용량 확보)
-            sudo docker image prune -f
+      # 5. S3로 배포 파일 업로드 (그림의 4번 과정)
+      - name: zip and upload to S3
+        run: |
+          zip -r deploy.zip appspec.yml scripts/ docker-compose.yml .env
+          aws s3 cp deploy.zip s3://${{ secrets.AWS_S3_BUCKET }}/deploy.zip
+
+      # 6. CodeDeploy 실행 (그림의 5번 과정)
+      - name: CodeDeploy
+        run: |
+          aws deploy create-deployment \
+            --application-name carrot-warehouse-app \
+            --deployment-config-name CodeDeployDefault.AllAtOnce \
+            --deployment-group-name carrot-warehouse-group \
+            --s3-location bucket=${{ secrets.AWS_S3_BUCKET }},key=deploy.zip,bundleType=zip
