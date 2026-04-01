@@ -5,6 +5,14 @@ files:
     destination: /home/ubuntu/changopj
     overwrite: yes
 
+# 추가: 실행 권한을 명시적으로 부여합니다.
+permissions:
+  - object: /home/ubuntu/changopj/scripts/deploy.sh
+    pattern: "**"
+    mode: 755
+    owner: ubuntu
+    group: ubuntu
+
 hooks:
   AfterInstall:
     - location: scripts/deploy.sh
