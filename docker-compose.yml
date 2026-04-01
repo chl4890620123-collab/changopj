@@ -3,18 +3,18 @@ version: '3.8'
 services:
   # 1. 백엔드 (RDS 연결)
   backend:
-    # 💡 변수명을 괄호 ${AWS_ACCOUNT_ID} 형태로 쓰면 더 안정적입니다.
     image: ${AWS_ACCOUNT_ID}.dkr.ecr.ap-northeast-2.amazonaws.com/carrot-backend:latest
     container_name: carrot-backend
     restart: always
     ports:
       - "8080:8080"
-    # 💡 env_file을 추가하면 .env 파일의 모든 내용을 자동으로 읽어옵니다.
+    # .env 파일의 모든 환경 변수를 로드합니다.
     env_file:
       - .env
     environment:
-      # RDS 접속 정보 (jdbc url에 DB 이름이 restock_db인지 꼭 확인하세요!)
-      SPRING_DATASOURCE_URL: jdbc:mariadb://${RDS_HOSTNAME}:3306/restock_db?characterEncoding=UTF-8
+      # SSL 관련 보안 연결 오류를 해결하기 위해 파라미터를 추가했습니다.
+      # useSSL=false와 allowPublicKeyRetrieval=true 등을 조합하여 접속을 시도합니다.
+      SPRING_DATASOURCE_URL: jdbc:mariadb://${RDS_HOSTNAME}:3306/restock_db?characterEncoding=UTF-8&useSSL=false&allowPublicKeyRetrieval=true&verifyServerCertificate=false
       SPRING_DATASOURCE_USERNAME: ${RDS_USERNAME}
       SPRING_DATASOURCE_PASSWORD: ${RDS_PASSWORD}
       
@@ -26,7 +26,7 @@ services:
       AWS_SECRET_KEY: ${AWS_SECRET_KEY}
       AWS_S3_BUCKET: ${AWS_S3_BUCKET}
       
-      # CORS 설정 (EC2_HOST가 도메인이면 상관없지만, IP라면 http:// 포함 확인)
+      # CORS 설정: EC2_HOST 변수가 .env에 정의되어 있어야 합니다.
       APP_CORS_ALLOWED_ORIGINS: http://${EC2_HOST},http://${EC2_HOST}:3000
 
   # 2. 프론트엔드
@@ -38,6 +38,5 @@ services:
       - "80:80"
     depends_on:
       - backend
-    # 💡 프론트엔드도 환경 변수가 필요하다면 env_file을 추가해주는 게 좋습니다.
     env_file:
       - .env
