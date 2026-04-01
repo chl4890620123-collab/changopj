@@ -14,7 +14,8 @@ spring:
   datasource:
     # DB 주소, 계정 정보는 환경 변수로 주입받음
     driver-class-name: org.mariadb.jdbc.Driver
-    url: jdbc:mariadb://${RDS_HOSTNAME}:3306/restock_db?characterEncoding=UTF-8
+    # SSL 관련 파라미터(&useSSL=true&trustServerCertificate=true)를 추가했습니다.
+    url: jdbc:mariadb://${RDS_HOSTNAME}:3306/restock_db?characterEncoding=UTF-8&useSSL=true&trustServerCertificate=true
     username: ${RDS_USERNAME}
     password: ${RDS_PASSWORD}
 
@@ -25,6 +26,8 @@ spring:
     properties:
       hibernate:
         format_sql: true
+        # DB 연결 성공 후 Dialect를 찾지 못하는 상황을 방지하기 위해 명시적 추가를 권장합니다.
+        dialect: org.hibernate.dialect.MariaDBDialect
 
   # Google OAuth 설정
   security:
