@@ -3,13 +3,17 @@ version: '3.8'
 services:
   # 1. 백엔드 (RDS 연결)
   backend:
+    # 💡 변수명을 괄호 ${AWS_ACCOUNT_ID} 형태로 쓰면 더 안정적입니다.
     image: ${AWS_ACCOUNT_ID}.dkr.ecr.ap-northeast-2.amazonaws.com/carrot-backend:latest
     container_name: carrot-backend
     restart: always
     ports:
       - "8080:8080"
+    # 💡 env_file을 추가하면 .env 파일의 모든 내용을 자동으로 읽어옵니다.
+    env_file:
+      - .env
     environment:
-      # RDS 접속 정보 (GitHub Secrets에서 주입됨)
+      # RDS 접속 정보 (jdbc url에 DB 이름이 restock_db인지 꼭 확인하세요!)
       SPRING_DATASOURCE_URL: jdbc:mariadb://${RDS_HOSTNAME}:3306/restock_db?characterEncoding=UTF-8
       SPRING_DATASOURCE_USERNAME: ${RDS_USERNAME}
       SPRING_DATASOURCE_PASSWORD: ${RDS_PASSWORD}
@@ -22,6 +26,7 @@ services:
       AWS_SECRET_KEY: ${AWS_SECRET_KEY}
       AWS_S3_BUCKET: ${AWS_S3_BUCKET}
       
+      # CORS 설정 (EC2_HOST가 도메인이면 상관없지만, IP라면 http:// 포함 확인)
       APP_CORS_ALLOWED_ORIGINS: http://${EC2_HOST},http://${EC2_HOST}:3000
 
   # 2. 프론트엔드
@@ -33,3 +38,6 @@ services:
       - "80:80"
     depends_on:
       - backend
+    # 💡 프론트엔드도 환경 변수가 필요하다면 env_file을 추가해주는 게 좋습니다.
+    env_file:
+      - .env
