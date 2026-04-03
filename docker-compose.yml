@@ -1,38 +1,33 @@
 version: '3.8'
 
 services:
-  # 1. 백엔드 (8080 포트를 호스트의 8080으로 연결하거나, 프론트와 겹치지 않게 설정)
   backend:
     image: ${AWS_ACCOUNT_ID}.dkr.ecr.ap-northeast-2.amazonaws.com/carrot-backend:latest
     container_name: carrot-backend
     restart: always
     ports:
-      - "8080:8080"  # 외부에서 직접 API 호출 시 8080 사용
+      - "8080:8080"
     env_file:
       - .env
     environment:
-      SPRING_DATASOURCE_URL: jdbc:mariadb://${RDS_HOSTNAME}:3306/restock_db?characterEncoding=UTF-8&useSSL=true&trustServerCertificate=true
+      # 성공했던 기존 로직 유지 (엔드포인트:3306)
+      SPRING_DATASOURCE_URL: jdbc:mariadb://${RDS_HOSTNAME}:3306/restock_db?characterEncoding=UTF-8&serverTimezone=Asia/Seoul&useSSL=false&allowPublicKeyRetrieval=true
       SPRING_DATASOURCE_USERNAME: ${RDS_USERNAME}
       SPRING_DATASOURCE_PASSWORD: ${RDS_PASSWORD}
-      
       GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID}
       GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET}
       AI_GOOGLE_GEMINI_API_KEY: ${GEMINI_API_KEY}
-      
       AWS_ACCESS_KEY: ${AWS_ACCESS_KEY}
       AWS_SECRET_KEY: ${AWS_SECRET_KEY}
       AWS_S3_BUCKET: ${AWS_S3_BUCKET}
-      
-      # CORS 설정을 도메인 기반으로 변경
-      APP_CORS_ALLOWED_ORIGINS: http://yellow.it.kr,http://localhost:3000
+      APP_CORS_ALLOWED_ORIGINS: http://yellow.it.kr,https://yellow.it.kr,http://localhost:3000
 
-  # 2. 프론트엔드 (사용자가 접속하는 메인 포트)
   frontend:
     image: ${AWS_ACCOUNT_ID}.dkr.ecr.ap-northeast-2.amazonaws.com/carrot-frontend:latest
     container_name: carrot-frontend
     restart: always
     ports:
-      - "80:80"  # http://yellow.it.kr 접속 시 80포트로 연결
+      - "80:80"
     depends_on:
       - backend
     env_file:
