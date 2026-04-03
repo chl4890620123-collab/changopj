@@ -1,6 +1,7 @@
 version: '3.8'
 
 services:
+  # 1. 백엔드 (Spring Boot)
   backend:
     image: ${AWS_ACCOUNT_ID}.dkr.ecr.ap-northeast-2.amazonaws.com/carrot-backend:latest
     container_name: carrot-backend
@@ -10,18 +11,23 @@ services:
     env_file:
       - .env
     environment:
-      # 성공했던 기존 로직 유지 (엔드포인트:3306)
+      # DB 연결 (기존 성공 로직 유지 + 타임존/보안 보강)
       SPRING_DATASOURCE_URL: jdbc:mariadb://${RDS_HOSTNAME}:3306/restock_db?characterEncoding=UTF-8&serverTimezone=Asia/Seoul&useSSL=false&allowPublicKeyRetrieval=true
       SPRING_DATASOURCE_USERNAME: ${RDS_USERNAME}
       SPRING_DATASOURCE_PASSWORD: ${RDS_PASSWORD}
+      
+      # API 및 AWS 설정
       GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID}
       GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET}
       AI_GOOGLE_GEMINI_API_KEY: ${GEMINI_API_KEY}
       AWS_ACCESS_KEY: ${AWS_ACCESS_KEY}
       AWS_SECRET_KEY: ${AWS_SECRET_KEY}
       AWS_S3_BUCKET: ${AWS_S3_BUCKET}
-      APP_CORS_ALLOWED_ORIGINS: http://yellow.it.kr,https://yellow.it.kr,http://localhost:3000
+      
+      # 도메인 허용 (CORS)
+      APP_CORS_ALLOWED_ORIGINS: ${APP_CORS_ALLOWED_ORIGINS}
 
+  # 2. 프론트엔드 (React + Nginx)
   frontend:
     image: ${AWS_ACCOUNT_ID}.dkr.ecr.ap-northeast-2.amazonaws.com/carrot-frontend:latest
     container_name: carrot-frontend
