@@ -26,7 +26,7 @@ services:
 
     # ✅ [수정 핵심] 따옴표를 추가하고 들여쓰기를 정확히 맞췄습니다.
     volumes:
-      - "/home/ubuntu/changopj/restokimg:/home/ubuntu/changopj/restokimg"
+      - "/home/ubuntu/changopj/restokimg/"
 
   # 2. 프론트엔드 (React + Nginx)
   carrot-frontend:
