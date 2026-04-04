@@ -61,4 +61,4 @@ ai:
 # ✅ [수정] 도커에서 넘겨주는 FILE_UPLOAD_DIR 환경 변수를 사용합니다.
 # 변수가 없을 경우 기본값으로 생성하신 폴더 경로를 사용합니다.
 file:
-  upload-dir: /home/ubuntu/changopj/restokimg
+  upload-dir: /home/ubuntu/changopj/restokimg/
