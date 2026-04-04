@@ -1,5 +1,4 @@
 name: Deploy to Amazon EC2 with CodeDeploy
-
 on:
   push:
     branches: [ "main" ]
@@ -27,16 +26,18 @@ jobs:
       # 3. Docker 이미지 빌드 및 ECR 푸시
       - name: Build and Push to ECR
         run: |
+          # 백엔드 빌드
           docker build -t ${{ steps.login-ecr.outputs.registry }}/carrot-backend ./backend
           docker push ${{ steps.login-ecr.outputs.registry }}/carrot-backend
           
+          # 프론트엔드 빌드 (✅ 도메인 주소로 빌드 인자 수정)
           docker build \
-            --build-arg REACT_APP_API_URL=http://${{ secrets.EC2_HOST }}:8080 \
+            --build-arg REACT_APP_API_URL=http://yellow.it.kr:8080 \
             --build-arg REACT_APP_GOOGLE_CLIENT_ID=${{ secrets.GOOGLE_CLIENT_ID }} \
             -t ${{ steps.login-ecr.outputs.registry }}/carrot-frontend ./frontend
           docker push ${{ steps.login-ecr.outputs.registry }}/carrot-frontend
 
-      # 4. 배포용 .env 파일 생성 (SSL 옵션 주입 및 필수 변수 추가)
+      # 4. 배포용 .env 파일 생성
       - name: Create .env file
         run: |
           echo "RDS_HOSTNAME=${{ secrets.RDS_HOSTNAME }}" > .env
@@ -50,11 +51,13 @@ jobs:
           echo "EC2_HOST=${{ secrets.EC2_HOST }}" >> .env
           echo "AWS_ACCESS_KEY=${{ secrets.AWS_ACCESS_KEY }}" >> .env
           echo "AWS_SECRET_KEY=${{ secrets.AWS_SECRET_KEY }}" >> .env
+          # ✅ CORS 허용 목록 추가 (백엔드 보안 해제)
+          echo "APP_CORS_ALLOWED_ORIGINS=http://yellow.it.kr,http://yellow.it.kr:8080,http://3.36.13.76" >> .env
 
-      # 5. S3로 배포 파일 업로드
+      # 5. S3로 배포 파일 업로드 (✅ nginx.conf 포함 확인)
       - name: zip and upload to S3
         run: |
-          zip -r deploy.zip appspec.yml scripts/ docker-compose.yml .env
+          zip -r deploy.zip appspec.yml scripts/ docker-compose.yml .env nginx.conf
           aws s3 cp deploy.zip s3://${{ secrets.AWS_S3_BUCKET }}/deploy.zip
 
       # 6. CodeDeploy 실행
