@@ -21,9 +21,13 @@ services:
       AWS_SECRET_KEY: ${AWS_SECRET_KEY}
       AWS_S3_BUCKET: ${AWS_S3_BUCKET}
       APP_CORS_ALLOWED_ORIGINS: ${APP_CORS_ALLOWED_ORIGINS}
+      
+      # ✅ [수정 핵심] 스프링이 file.upload-dir로 바로 인식하게 이름을 변경했습니다.
       FILE_UPLOAD_DIR: "/home/ubuntu/changopj/restokimg/"
+
+    # ✅ 호스트:컨테이너 경로 매핑 (정상)
     volumes:
-      - "/home/ubuntu/changopj/restokimg:/home/ubuntu/changopj/restokimg"
+       "/home/ubuntu/changopj/restokimg:/home/ubuntu/changopj/restokimg"
 
   # 2. 프론트엔드 (React + Nginx)
   carrot-frontend:
