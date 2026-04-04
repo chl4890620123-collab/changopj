@@ -8,7 +8,7 @@ spring:
     activate:
       on-profile: prod
 
-  # ✅ 파일 업로드 용량 제한 (10MB로 유지)
+  # ✅ 파일 업로드 용량 제한 (10MB)
   servlet:
     multipart:
       enabled: true
@@ -58,8 +58,7 @@ ai:
     gemini:
       api-key: ${AI_GOOGLE_GEMINI_API_KEY}
 
-# ✅ [수정 핵심] 생성하신 실제 폴더 경로로 지정합니다.
-# 도커 컨테이너 내부에서도 이 경로를 사용할 수 있도록 /home/ubuntu/changopj/restokimg 로 지정하거나,
-# 도커 볼륨 설정이 되어 있다면 해당 마운트 경로를 적어야 합니다.
+# ✅ [수정] 도커에서 넘겨주는 FILE_UPLOAD_DIR 환경 변수를 사용합니다.
+# 변수가 없을 경우 기본값으로 생성하신 폴더 경로를 사용합니다.
 file:
-  upload-dir: /home/ubuntu/changopj/restokimg
+  upload-dir: ${FILE_UPLOAD_DIR:/home/ubuntu/changopj/restokimg}
