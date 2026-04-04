@@ -8,7 +8,7 @@ spring:
     activate:
       on-profile: prod
 
-  # ✅ 파일 업로드 용량 제한 (10MB)
+  # ✅ 파일 업로드 용량 제한
   servlet:
     multipart:
       enabled: true
@@ -41,6 +41,7 @@ spring:
               - email
               - profile
 
+# ✅ [수정] 최상위 계층 정렬 (spring: 과 같은 라인에 위치해야 함)
 cloud:
   aws:
     s3:
@@ -58,7 +59,7 @@ ai:
     gemini:
       api-key: ${AI_GOOGLE_GEMINI_API_KEY}
 
-# ✅ [수정] 도커에서 넘겨주는 FILE_UPLOAD_DIR 환경 변수를 사용합니다.
-# 변수가 없을 경우 기본값으로 생성하신 폴더 경로를 사용합니다.
+# ✅ [수정 핵심] 도커 환경 변수를 우선적으로 읽도록 설정
+# ${변수명:기본값} 형식을 사용해야 도커의 설정을 가져옵니다.
 file:
-  upload-dir: /home/ubuntu/changopj/restokimg/
+  upload-dir: ${FILE_UPLOAD_DIR:/home/ubuntu/changopj/restokimg/}
