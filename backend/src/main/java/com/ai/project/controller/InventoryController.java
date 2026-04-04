@@ -2,7 +2,7 @@ package com.ai.project.controller;
 
 import com.ai.project.entity.Product;
 import com.ai.project.repository.ProductRepository;
-import com.ai.project.service.CleanupService; // 추가
+import com.ai.project.service.CleanupService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -25,7 +25,7 @@ import java.util.UUID;
 public class InventoryController {
 
     private final ProductRepository productRepository;
-    private final CleanupService cleanupService; // 📍 자동 삭제 트리거를 위해 주입
+    private final CleanupService cleanupService;
 
     @Value("${file.upload-dir}")
     private String uploadDir;
@@ -47,7 +47,10 @@ public class InventoryController {
         return productRepository.findByIdAndUserId(id, userId).map(product -> {
             if (product.getImageUrl() != null && product.getImageUrl().startsWith("/uploads/")) {
                 String fileName = product.getImageUrl().replace("/uploads/", "");
-                File file = new File(uploadDir + fileName);
+                
+                // ✅ [수정] 문자열 더하기(+) 대신 인자를 2개 받는 생성자 사용
+                File file = new File(uploadDir, fileName); 
+                
                 if (file.exists()) {
                     if (file.delete()) log.info("📁 관련 이미지 파일 삭제 완료: {}", fileName);
                 }
@@ -77,9 +80,16 @@ public class InventoryController {
 
             if (file != null && !file.isEmpty()) {
                 String fileName = UUID.randomUUID() + "_" + file.getOriginalFilename();
-                File dest = new File(uploadDir + fileName);
+                
+                // ✅ [수정] 경로와 파일명을 안전하게 결합
+                File dest = new File(uploadDir, fileName);
+                
+                // ✅ [추가] 실제 시도하는 경로를 로그로 찍어 확인 가능하게 함
+                log.info("📂 파일 저장 시도 경로: {}", dest.getAbsolutePath());
+
                 File parent = dest.getParentFile();
                 if (parent != null && !parent.exists()) parent.mkdirs();
+                
                 file.transferTo(dest);
                 product.setImageUrl("/uploads/" + fileName);
             }
@@ -90,7 +100,7 @@ public class InventoryController {
 
         } catch (IOException e) {
             log.error("❌ 재고 등록 실패: {}", e.getMessage());
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("데이터 형식이 올바르지 않습니다.");
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("파일 저장 중 오류가 발생했습니다.");
         }
     }
 
@@ -109,7 +119,6 @@ public class InventoryController {
         String userId = getCurrentUserId(auth);
         if (userId == null) return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
 
-        // 📍 목록 조회 시점에 만료된 데이터가 있다면 즉시 삭제 처리
         cleanupService.runAutoDelete();
 
         return ResponseEntity.ok(productRepository.findByUserIdOrderByExpiryDateAsc(userId));
@@ -140,31 +149,28 @@ public class InventoryController {
             Product details = mapper.readValue(productJson, Product.class);
 
             return productRepository.findByIdAndUserId(id, userId).map(product -> {
-                // 📍 1. 기본 정보 업데이트
                 product.setName(details.getName());
                 product.setCategory(details.getCategory());
                 product.setLocation(details.getLocation());
                 product.setStock(details.getStock());
                 product.setStatus(details.getStatus());
                 product.setDescription(details.getDescription());
-
-                // 📍 2. 날짜 및 자동 삭제 관련 핵심 필드 업데이트 (누락되었던 부분)
                 product.setTimeType(details.getTimeType());
                 product.setReferenceDate(details.getReferenceDate());
                 product.setExpiryDate(details.getExpiryDate());
-                product.setAutoDelete(details.isAutoDelete()); // Boolean 필드 반영
-
-                // 📍 3. 기타 필드 업데이트
+                product.setAutoDelete(details.isAutoDelete());
                 product.setQrCodeData(details.getQrCodeData());
                 product.setServiceName(details.getServiceName());
                 product.setServiceType(details.getServiceType());
                 product.setCustomUrl(details.getCustomUrl());
 
-                // 4. 이미지 처리
                 if (file != null && !file.isEmpty()) {
                     try {
                         String fileName = UUID.randomUUID() + "_" + file.getOriginalFilename();
-                        File dest = new File(uploadDir + fileName);
+                        
+                        // ✅ [수정] 업데이트 시에도 안전한 경로 생성 방식 적용
+                        File dest = new File(uploadDir, fileName);
+                        
                         File parent = dest.getParentFile();
                         if (parent != null && !parent.exists()) parent.mkdirs();
                         file.transferTo(dest);
