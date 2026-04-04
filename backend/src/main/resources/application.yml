@@ -1,22 +1,19 @@
 spring:
   profiles:
-    active: prod # 기본 실행 프로필을 운영(prod)으로 설정
+    active: prod
 
 ---
-# ----------------------------------------------------------------
-# 운영 환경 (Production) 설정
-# ----------------------------------------------------------------
 spring:
   config:
     activate:
       on-profile: prod
 
-  # ✅ [추가] 파일 업로드 용량 제한 설정 (400 에러 해결 핵심)
+  # ✅ 파일 업로드 용량 제한 (10MB로 유지)
   servlet:
     multipart:
       enabled: true
-      max-file-size: 10MB      # 파일 하나의 최대 크기
-      max-request-size: 10MB   # 한 번의 요청에 포함된 전체 파일 크기
+      max-file-size: 10MB
+      max-request-size: 10MB
 
   datasource:
     driver-class-name: org.mariadb.jdbc.Driver
@@ -33,7 +30,6 @@ spring:
         format_sql: true
         dialect: org.hibernate.dialect.MariaDBDialect
 
-  # Google OAuth 설정
   security:
     oauth2:
       client:
@@ -45,9 +41,6 @@ spring:
               - email
               - profile
 
-# ----------------------------------------------------------------
-# AWS & AI 설정 (S3 및 Gemini)
-# ----------------------------------------------------------------
 cloud:
   aws:
     s3:
@@ -60,12 +53,13 @@ cloud:
     stack:
       auto: false
 
-# AI Gemini API Key (액션에서 주입받은 환경변수와 매핑)
 ai:
   google:
     gemini:
       api-key: ${AI_GOOGLE_GEMINI_API_KEY}
 
-# 업로드 경로 설정 (로컬 테스트용과 S3 구분 시 사용)
+# ✅ [수정 핵심] 생성하신 실제 폴더 경로로 지정합니다.
+# 도커 컨테이너 내부에서도 이 경로를 사용할 수 있도록 /home/ubuntu/changopj/restokimg 로 지정하거나,
+# 도커 볼륨 설정이 되어 있다면 해당 마운트 경로를 적어야 합니다.
 file:
-  upload-dir: s3://${AWS_S3_BUCKET}/uploads
+  upload-dir: /home/ubuntu/changopj/restokimg
