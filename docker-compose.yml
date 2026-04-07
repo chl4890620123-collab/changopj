@@ -3,17 +3,23 @@ version: '3.8'
 services:
   # 1. 백엔드 (Spring Boot)
   carrot-backend:
+  #  aws ime인증
     image: ${AWS_ACCOUNT_ID}.dkr.ecr.ap-northeast-2.amazonaws.com/carrot-backend:latest
+    
     container_name: carrot-backend
     restart: always
+    #  포트
     ports:
       - "8080:8080"
+    # .env 파일
     env_file:
       - .env
+     #  db설정 
     environment:
       SPRING_DATASOURCE_URL: "jdbc:mariadb://${RDS_HOSTNAME}:3306/restock_db?characterEncoding=UTF-8&serverTimezone=Asia/Seoul&useSSL=false&allowPublicKeyRetrieval=true"
       SPRING_DATASOURCE_USERNAME: ${RDS_USERNAME}
       SPRING_DATASOURCE_PASSWORD: ${RDS_PASSWORD}
+      #  api 설정
       GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID}
       GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET}
       AI_GOOGLE_GEMINI_API_KEY: ${GEMINI_API_KEY}
@@ -31,6 +37,7 @@ services:
 
   # 2. 프론트엔드 (React + Nginx)
   carrot-frontend:
+  #  aws ima 인증
     image: ${AWS_ACCOUNT_ID}.dkr.ecr.ap-northeast-2.amazonaws.com/carrot-frontend:latest
     container_name: carrot-frontend
     restart: always
@@ -38,7 +45,9 @@ services:
       - "80:80"
     depends_on:
       - carrot-backend
+  #  프론트쪽 api 부분
     env_file:
       - .env
+  #nginx설정  
     volumes:
       - "./nginx.conf:/etc/nginx/conf.d/default.conf:ro"
