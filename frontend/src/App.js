@@ -1,7 +1,7 @@
 import React from 'react';
 import { Routes, Route, Link, useLocation, Navigate } from 'react-router-dom'; 
 import { Container, Nav } from 'react-bootstrap';
-import api from './api'; // ✅ 공통 API 객체 임포트 확인 (경로가 다르면 수정하세요)
+import api from './api'; 
 import Dashboard from './pages/Dashboard';
 import Inventory from './pages/Inventory';
 import InventoryEdit from './pages/InventoryEdit';
@@ -19,16 +19,16 @@ function App() {
   const isAuthPage = location.pathname === '/login' || location.pathname === '/signup';
   const savedToken = localStorage.getItem('token');
   
-  // 구글 로그인 후 돌아오는 길인지 확인
+  // 구글 로그인
   const params = new URLSearchParams(location.search);
   const hasUrlToken = params.has('token');
 
-  // ✅ [수정된 로그아웃 함수]
+  //  로그아웃 함수]
   const handleLogout = async () => {
     if (window.confirm("로그아웃 하시겠습니까?")) {
       try {
         // 1. 서버에 로그아웃 요청 (세션/쿠키 제거)
-        // api.js에 설정된 baseURL 덕분에 경로만 적으면 됩니다.
+     
         await api.post('/api/auth/logout');
       } catch (error) {
         console.error("로그아웃 서버 통신 실패:", error);
@@ -37,24 +37,25 @@ function App() {
         localStorage.removeItem('token');
         localStorage.removeItem('user'); // 유저 정보가 있다면 함께 삭제
         
-        // 3. ✅ 핵심: 8080 주소가 아닌 프런트엔드 내의 /login으로 이동
-        // 상대 경로를 사용해야 localhost:3000 유지가 됩니다.
+        // 8080 주소가 아닌 프런트엔드 내의 /login으로 이동
+     
         window.location.href = '/login';
       }
     }
   };
 
-  // 인증 가드
+  // 인증 로직
   if (!savedToken && !isAuthPage && !hasUrlToken) {
     return <Navigate to="/login" replace />;
   }
-
+// 처음 대시보드쪽 시작
   return (
     <div className="app-container">
       {!isAuthPage && (
         <aside className="sidebar">
           <div className="sidebar-logo mb-4">
             <h2 style={{ color: '#ff8a3d', fontWeight: '800' }}>ReStock</h2>
+    //색
             <p className="text-muted small">AI 스마트 재고관리 시스템</p>
           </div>
           <Nav className="flex-column gap-2 flex-grow-1">
@@ -73,7 +74,7 @@ function App() {
             >
               재고 현황
             </Nav.Link>
-            
+      //링크로 이동하는로직      
             <Nav.Link as={Link} to="/inbound" className={location.pathname === '/inbound' ? 'active' : ''}> 신규 입고</Nav.Link>
             <Nav.Link as={Link} to="/scanner" className={location.pathname === '/scanner' ? 'active' : ''}> QR 스캐너</Nav.Link>
             <Nav.Link as={Link} to="/chat" className={location.pathname === '/chat' ? 'active' : ''}> AI 챗봇</Nav.Link>
