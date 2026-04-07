@@ -117,7 +117,7 @@ const Inbound = () => {
             }
         }
     }, [formData.name]);
-
+//카테고리 생성
     const addCategory = async () => {
         const trimmed = newCat.trim();
         if(trimmed && !categories.includes(trimmed)) {
@@ -131,7 +131,7 @@ const Inbound = () => {
             }
         }
     };
-
+//위치 생성
     const removeCategory = async (e, target) => {
         e.stopPropagation();
         try {
@@ -172,7 +172,7 @@ const Inbound = () => {
         }
     };
 
-    // ✅ [수정된 저장 함수]
+    // 필수 값 지정
     const handleSave = async () => {
         if (!imageBlob) return alert("사진을 촬영하거나 등록해 주세요.");
         if (!formData.name.trim()) return alert("품목 이름을 입력해 주세요.");
@@ -201,7 +201,7 @@ const Inbound = () => {
         sendData.append("data", new Blob([JSON.stringify(finalData)], { type: "application/json" }));
 
         try {
-            // ✅ 경로: /api/inventory/with-image (POST)
+            // 경로: /api/inventory/with-image (POST)
             await api.post('/api/inventory/with-image', sendData, {
                 headers: { 'Content-Type': 'multipart/form-data' }
             });
