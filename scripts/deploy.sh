@@ -2,7 +2,7 @@
 # 작업 경로로 이동
 cd /home/ec2-user/changopj || { echo "Directory not found"; exit 1; }
 
-# 1. 환경 변수 로드 (더 안전한 방식)
+# 1. 환경 변수 로드
 if [ -f .env ]; then
     set -a
     source .env
