@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Card, Button, Form, Spinner } from 'react-bootstrap';
-import styles from './AiChat.module.css'; // 위에서 만든 CSS 임포트
+import styles from './AiChat.module.css'; 
 
 const API_BASE_URL = process.env.REACT_APP_API_URL || '';
 
@@ -14,14 +14,14 @@ const AiChat = () => {
     const recognitionRef = useRef(null);
     const scrollRef = useRef(null);
 
-    // 자동 스크롤 로직 유지
+    // 자동 스크롤 로직 
     useEffect(() => {
         if (scrollRef.current) {
             scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
         }
     }, [messages, isLoading]);
 
-    // 음성 인식 설정 로직 유지
+    // 음성 인식 설정 로직 
     useEffect(() => {
         const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
         if (SpeechRecognition) {
@@ -35,7 +35,7 @@ const AiChat = () => {
         }
         return () => recognitionRef.current && recognitionRef.current.abort();
     }, []);
-
+//실패했을때
     const toggleRecording = useCallback(() => {
         if (!recognitionRef.current) return alert('마이크를 지원하지 않습니다.');
         if (isRecording) {
@@ -54,7 +54,7 @@ const AiChat = () => {
         setMessages(prev => [...prev, { id: Date.now(), sender: 'user', text: msgText }]);
         setInput('');
         setIsLoading(true);
-
+//들어왔을떄 실패했을때 
         try {
             const res = await fetch(`${API_BASE_URL}/api/chat/ask`, {
                 method: 'POST',
